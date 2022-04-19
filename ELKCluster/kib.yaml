@@ -1,0 +1,11 @@
+server.name: kib01
+server.host: "0"
+server.publicBaseUrl: "https://elk.site"
+monitoring.enabled: true
+elasticsearch.username: elastic
+elasticsearch.password: XXXXXXXXXX
+elasticsearch.hosts: "https://es01:9200"
+xpack.encryptedSavedObjects.encryptionKey: XXXXXXXXXX
+elasticsearch.ssl.certificateAuthorities: "config/client-ca.cer"
+elasticsearch.ssl.verificationMode: "certificate"
+xpack.apm.ui.maxTraceItems: 3000

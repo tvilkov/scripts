@@ -1,0 +1,20 @@
+{
+    "vhosts": [
+        {
+            "name": "/"
+        },
+        {
+            "name": "vs.bus.test"
+        }
+    ],
+    "queues": [
+        {
+            "name": "tx-to-vs-tran",
+            "vhost": "/",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {}
+        }
+    ],
+    "users": []
+}

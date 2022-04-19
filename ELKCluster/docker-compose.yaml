@@ -1,0 +1,134 @@
+version: '3.7'
+services:
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.12.0
+    container_name: es01
+    restart: always
+    environment:
+      - node.name=es01
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=es02
+      - cluster.initial_master_nodes=es01,es02
+      - ELASTIC_PASSWORD=XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      - bootstrap.memory_lock=true
+      - logger.level=WARN
+      - "ES_JAVA_OPTS=-Xms5g -Xmx5g"
+      - node.attr.rack_id=sdd
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./es01:/usr/share/elasticsearch/data
+      - ./es01.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+      - ./ssl/elastic-certificates.p12:/usr/share/elasticsearch/config/elastic-certificates.p12:ro
+      - ./ssl/client.cer:/usr/share/elasticsearch/config/client.cer:ro
+      - ./ssl/client.key:/usr/share/elasticsearch/config/client.key:ro
+      - ./ssl/client.p12:/usr/share/elasticsearch/config/client.p12:ro
+    ports:
+      - 9200:9200
+      - 9300:9300
+    networks:
+      - elastic
+
+  es02:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.12.0
+    container_name: es02
+    restart: always
+    environment:
+      - node.name=es02
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=es01
+      - cluster.initial_master_nodes=es01,es02
+      - ELASTIC_PASSWORD=XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      - bootstrap.memory_lock=true
+      - logger.level=WARN
+      - "ES_JAVA_OPTS=-Xms5g -Xmx5g"
+      - node.attr.rack_id=hdd
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./es02:/usr/share/elasticsearch/data
+      - ./es01.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+      - ./ssl/elastic-certificates.p12:/usr/share/elasticsearch/config/elastic-certificates.p12:ro
+      - ./ssl/client.cer:/usr/share/elasticsearch/config/client.cer:ro
+      - ./ssl/client.key:/usr/share/elasticsearch/config/client.key:ro
+      - ./ssl/client.p12:/usr/share/elasticsearch/config/client.p12:ro
+    networks:
+      - elastic
+
+  apm-server:
+    hostname: "dev-apm"
+    image: docker.elastic.co/apm/apm-server:7.12.0
+    restart: always
+    cap_add: ["CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID"]
+    cap_drop: ["ALL"]
+    depends_on:
+      - "letsencrypt"
+    environment:
+      - WAIT_HOSTS=kib01:5601
+      - WAIT_HOSTS_TIMEOUT=300
+      - WAIT_SLEEP_INTERVAL=30
+    volumes:
+      - './apm.yml:/usr/share/apm-server/apm-server.yml:ro'
+      - ./certs:/etc/nginx/certs
+    networks:
+      - elastic
+    ports:
+      - '8200:8200'
+
+  kib01:
+    image: docker.elastic.co/kibana/kibana:7.12.0
+    container_name: kib01
+    restart: always
+    depends_on:
+      - "letsencrypt"
+    ports:
+      - 5601:5601
+    environment:
+      VIRTUAL_HOST: elk.site
+      VIRTUAL_PORT: 5601
+      LETSENCRYPT_HOST: elk.site
+    volumes:
+      - './kib.yaml:/usr/share/kibana/config/kibana.yml'
+      - './ssl/client-ca.cer:/usr/share/kibana/config/client-ca.cer'
+    networks:
+      - elastic
+
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./html:/usr/share/nginx/html
+      - ./dhparam:/etc/nginx/dhparam
+      - ./vhost:/etc/nginx/vhost.d
+      - ./certs:/etc/nginx/certs
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    labels:
+      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy"
+    networks:
+      - elastic
+
+  letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: nginx-proxy-lets-encrypt
+    restart: always
+    depends_on:
+      - "nginx-proxy"
+    volumes:
+      - ./certs:/etc/nginx/certs
+      - ./vhost:/etc/nginx/vhost.d
+      - ./html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - elastic
+
+networks:
+  elastic:
+    driver: bridge

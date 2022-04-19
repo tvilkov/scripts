@@ -1,0 +1,1 @@
+docker-compose -f images/docker-compose.yml stop

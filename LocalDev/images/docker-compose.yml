@@ -1,0 +1,101 @@
+version: '3.7'
+
+services:
+  rabbitmq:
+    container_name: rabbitmq
+    build:
+      context: ./rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_VHOST=vs.bus.test
+    ports:
+      - 5672:5672
+      - 15672:15672
+      
+  mongo:
+    container_name: mongo
+    image: mongo:4
+    environment: 
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root
+    ports:
+      - 27017:27017
+
+  mongo-express:
+    container_name: mongo-express
+    image: mongo-express
+    ports:
+      - 4000:8081
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=root
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=root
+      - ME_CONFIG_MONGODB_URL=mongodb://root:root@mongo:27017/
+    depends_on:
+      - mongo
+    restart: always
+  
+  redis:
+    container_name: redis
+    image: redis:5.0-alpine
+    ports:
+      - 6379:6379
+        
+  mailserver:
+    image: maildev/maildev
+    container_name: mailserver
+    ports:
+      - "25:25"
+      - "4001:80"
+  
+  elasticsearch:
+   image: docker.elastic.co/elasticsearch/elasticsearch:7.4.0
+   container_name: elasticsearch
+   ports:
+     - 9200:9200
+     - 9300:9300
+   environment:
+     - discovery.type=single-node
+     - xpack.security.enabled=false
+   ulimits:
+     memlock:
+       soft: -1
+       hard: -1
+     nofile:
+       soft: 65536
+       hard: 65536
+   cap_add:
+     - IPC_LOCK
+   volumes:
+     - elasticsearch-data:/usr/share/elasticsearch/data
+  
+  kibana:
+   image: docker.elastic.co/kibana/kibana:7.4.0
+   container_name: kibana
+   ports:
+     - 5601:5601
+   environment:
+     SERVER_NAME: kibana.local.dev
+     ELASTICSEARCH_URL: http://elasticsearch:9200
+     ELASTICSEARCH_HOST: http://elasticsearch:9200
+   depends_on:
+     - elasticsearch
+
+  mssql:
+      container_name: mssql
+      image: mcr.microsoft.com/mssql/server:2019-CU11-ubuntu-20.04
+      ports:  
+        - 15591:1433
+        - 5022:5022
+      environment:
+        - SA_PASSWORD=root
+        - ACCEPT_EULA=Y
+      volumes:
+        - C:\MSSQL\Docker\datafiles:/var/opt/sqlserver
+        - C:\MSSQL\Docker\system:/var/opt/mssql
+
+ networks:
+   default:
+     name: dev-local
+
+volumes:
+  elasticsearch-data:
+    driver: local

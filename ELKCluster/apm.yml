@@ -1,0 +1,27 @@
+apm-server:
+  host: "0.0.0.0:8200"
+  rum.enabled: true
+  kibana:
+    enabled: true
+    host: "kib01:5601"
+    username: "elastic"
+    password: "XXXXXXXXXXXXXXXXXXXXXXXXXX"
+  ssl:
+    enabled: true
+    certificate: "/etc/nginx/certs/elk.site.crt"
+    key: "/etc/nginx/certs/elk.site.key"
+  secret_token: "XXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+output:
+  elasticsearch:
+    hosts: "es01:9200"
+    username: "elastic"
+    password: "XXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+setup:
+  kibana:
+    host: "kib01:5601"
+  template:
+    settings:
+    index.number_of_replicas: "0"
+#logging.level: error
